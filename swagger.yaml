@@ -1,0 +1,942 @@
+openapi: 3.0.0
+paths:
+  /api:
+    get:
+      operationId: AppController_getHello
+      parameters: []
+      responses:
+        "200":
+          description: ""
+      tags:
+        - App
+  /api/user:
+    post:
+      operationId: UserController_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserDto"
+      responses:
+        "201":
+          description: Usuario creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Datos inválidos
+      summary: Crear un nuevo usuario
+      tags: &ref_0
+        - users
+    get:
+      operationId: UserController_findAll
+      parameters: []
+      responses:
+        "200":
+          description: Lista de usuarios
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        "401":
+          description: No autorizado
+      security:
+        - bearer: []
+      summary: Obtener todos los usuarios
+      tags: *ref_0
+  /api/user/id/{id}:
+    get:
+      operationId: UserController_findOneUser
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: ID del usuario
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Usuario encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "404":
+          description: Usuario no encontrado
+      summary: Obtener un usuario por ID
+      tags: *ref_0
+  /api/user/findById:
+    get:
+      operationId: UserController_findOne
+      parameters: []
+      responses:
+        "200":
+          description: Usuario autenticado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: No autorizado
+      security:
+        - bearer: []
+      summary: Obtener el usuario autenticado
+      tags: *ref_0
+  /api/user/{id}:
+    patch:
+      operationId: UserController_update
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: ID del usuario
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserDto"
+      responses:
+        "200":
+          description: Usuario actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          description: Datos inválidos
+        "404":
+          description: Usuario no encontrado
+      summary: Actualizar un usuario
+      tags: *ref_0
+    delete:
+      operationId: UserController_remove
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: ID del usuario
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Usuario eliminado
+        "404":
+          description: Usuario no encontrado
+      summary: Eliminar un usuario
+      tags: *ref_0
+  /api/user/login:
+    post:
+      operationId: UserController_loginUser
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginUserDto"
+      responses:
+        "200":
+          description: Inicio de sesión exitoso
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponseDto"
+        "401":
+          description: Credenciales inválidas
+      summary: Iniciar sesión
+      tags: *ref_0
+  /api/user/check-status:
+    get:
+      operationId: UserController_checkAuthStatus
+      parameters: []
+      responses:
+        "200":
+          description: Usuario autenticado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: No autorizado
+      security:
+        - bearer: []
+      summary: Verificar estado de autenticación
+      tags: *ref_0
+  /api/shipment:
+    post:
+      operationId: ShipmentController_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateShipmentDto"
+      responses:
+        "201":
+          description: Envío creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shipment"
+        "400":
+          description: Datos inválidos
+        "401":
+          description: No autorizado
+      security:
+        - bearer: []
+      summary: Crear un nuevo envío
+      tags: &ref_1
+        - shipments
+    get:
+      operationId: ShipmentController_findAll
+      parameters: []
+      responses:
+        "200":
+          description: Lista de envíos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Shipment"
+        "401":
+          description: No autorizado
+      security:
+        - bearer: []
+      summary: Obtener todos los envíos
+      tags: *ref_1
+  /api/shipment/tracking/{trackingCode}:
+    get:
+      operationId: ShipmentController_findByTrackingCode
+      parameters:
+        - name: trackingCode
+          required: true
+          in: path
+          description: Código de rastreo del envío
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Envío encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shipment"
+        "404":
+          description: Envío no encontrado
+      summary: Buscar envío por código de rastreo
+      tags: *ref_1
+  /api/shipment/user/{userId}:
+    get:
+      operationId: ShipmentController_findByUserId
+      parameters:
+        - name: userId
+          required: true
+          in: path
+          description: ID del usuario
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Lista de envíos del usuario
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Shipment"
+        "401":
+          description: No autorizado
+        "404":
+          description: Usuario no encontrado
+      security:
+        - bearer: []
+      summary: Obtener envíos por ID de usuario
+      tags: *ref_1
+  /api/shipment/remitter/{remitterId}:
+    get:
+      operationId: ShipmentController_findByRemitterId
+      parameters:
+        - name: remitterId
+          required: true
+          in: path
+          description: ID del remitente
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Lista de envíos del remitente
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Shipment"
+        "401":
+          description: No autorizado
+        "404":
+          description: Remitente no encontrado
+      security:
+        - bearer: []
+      summary: Obtener envíos por ID de remitente
+      tags: *ref_1
+  /api/shipment/recipient/{recipientId}:
+    get:
+      operationId: ShipmentController_findByRecipientId
+      parameters:
+        - name: recipientId
+          required: true
+          in: path
+          description: ID del destinatario
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Lista de envíos del destinatario
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Shipment"
+        "401":
+          description: No autorizado
+        "404":
+          description: Destinatario no encontrado
+      security:
+        - bearer: []
+      summary: Obtener envíos por ID de destinatario
+      tags: *ref_1
+  /api/shipment/status/{statusId}:
+    get:
+      operationId: ShipmentController_findByStatus
+      parameters:
+        - name: statusId
+          required: true
+          in: path
+          description: ID del estado
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Lista de envíos con ese estado
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Shipment"
+        "401":
+          description: No autorizado
+        "404":
+          description: Estado no encontrado
+      security:
+        - bearer: []
+      summary: Obtener envíos por ID de estado
+      tags: *ref_1
+  /api/shipment/{id}/pdf:
+    get:
+      operationId: ShipmentController_downloadPdf
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: ID del envío
+          schema:
+            type: string
+      responses:
+        "200":
+          description: PDF descargado
+        "401":
+          description: No autorizado
+        "404":
+          description: Envío no encontrado
+      security:
+        - bearer: []
+      summary: Descargar PDF del envío
+      tags: *ref_1
+  /api/shipment/{id}:
+    patch:
+      operationId: ShipmentController_update
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: ID del envío
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateShipmentDto"
+      responses:
+        "200":
+          description: Envío actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shipment"
+        "400":
+          description: Datos inválidos
+        "401":
+          description: No autorizado
+        "404":
+          description: Envío no encontrado
+      security:
+        - bearer: []
+      summary: Actualizar un envío
+      tags: *ref_1
+    delete:
+      operationId: ShipmentController_remove
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: ID del envío
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Envío eliminado
+        "401":
+          description: No autorizado
+        "403":
+          description: No autorizado
+        "404":
+          description: Envío no encontrado
+      security:
+        - bearer: []
+      summary: Eliminar un envío (solo administradores)
+      tags: *ref_1
+  /api/client:
+    post:
+      operationId: ClientController_create
+      parameters: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClientDto"
+      responses:
+        "201":
+          description: Cliente creado exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+        "400":
+          description: Datos inválidos
+      security: &ref_2
+        - bearer: []
+      summary: Crear un nuevo cliente
+      tags: &ref_3
+        - clients
+    get:
+      operationId: ClientController_findAll
+      parameters: []
+      responses:
+        "200":
+          description: Lista de clientes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Client"
+      security: *ref_2
+      summary: Obtener todos los clientes
+      tags: *ref_3
+  /api/client/{id}:
+    get:
+      operationId: ClientController_findOne
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: Número de documento del cliente
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cliente encontrado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+        "404":
+          description: Cliente no encontrado
+      security: *ref_2
+      summary: Obtener un cliente por número de documento
+      tags: *ref_3
+    patch:
+      operationId: ClientController_update
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: ID del cliente
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateClientDto"
+      responses:
+        "200":
+          description: Cliente actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+        "400":
+          description: Datos inválidos
+        "404":
+          description: Cliente no encontrado
+      security: *ref_2
+      summary: Actualizar un cliente
+      tags: *ref_3
+    delete:
+      operationId: ClientController_remove
+      parameters:
+        - name: id
+          required: true
+          in: path
+          description: ID del cliente
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Cliente eliminado
+        "403":
+          description: No autorizado
+        "404":
+          description: Cliente no encontrado
+      security: *ref_2
+      summary: Eliminar un cliente (solo administradores)
+      tags: *ref_3
+info:
+  title: Shipments App API
+  description: API para gestión de envíos, usuarios y clientes
+  version: "1.0"
+  contact: {}
+tags:
+  - name: users
+    description: Operaciones relacionadas con usuarios
+  - name: clients
+    description: Operaciones relacionadas con clientes
+  - name: shipments
+    description: Operaciones relacionadas con envíos
+servers: []
+components:
+  securitySchemes:
+    JWT-auth:
+      scheme: bearer
+      bearerFormat: JWT
+      type: http
+      name: JWT
+      description: Enter JWT token
+      in: header
+  schemas:
+    CreateUserDto:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Nombre del usuario
+          example: Juan
+          maxLength: 30
+        lastname:
+          type: string
+          description: Apellido del usuario
+          example: Pérez
+          maxLength: 30
+        username:
+          type: string
+          description: Nombre de usuario único
+          example: juanperez
+          maxLength: 30
+        phoneNumber:
+          type: string
+          description: Número de teléfono
+          example: "1234567890"
+          maxLength: 15
+        password:
+          type: string
+          description: >-
+            Contraseña del usuario (mínimo 8 caracteres, con mayúscula,
+            minúscula, número y carácter especial)
+          example: Password123!
+          minLength: 8
+          maxLength: 20
+      required:
+        - name
+        - lastname
+        - username
+        - phoneNumber
+        - password
+    Client:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID único del cliente
+          example: 550e8400-e29b-41d4-a716-446655440001
+        name:
+          type: string
+          description: Nombre del cliente
+          example: María
+        lastname:
+          type: string
+          description: Apellido del cliente
+          example: García
+        documentType:
+          type: string
+          description: Tipo de documento
+          example: CC
+        documentNumber:
+          type: string
+          description: Número de documento único
+          example: "1234567890"
+        phoneNumber:
+          type: string
+          description: Número de teléfono
+          example: "0987654321"
+        address:
+          type: string
+          description: Dirección
+          example: "Calle 123 #45-67"
+        city:
+          type: string
+          description: Ciudad
+          example: Bogotá
+        email:
+          type: string
+          description: Correo electrónico único
+          example: maria.garcia@example.com
+        createdAt:
+          format: date-time
+          type: string
+          description: Fecha de creación
+          example: "2023-10-01T12:00:00Z"
+        updatedAt:
+          format: date-time
+          type: string
+          description: Fecha de actualización
+          example: "2023-10-02T12:00:00Z"
+      required:
+        - id
+        - name
+        - lastname
+        - documentType
+        - documentNumber
+        - phoneNumber
+        - address
+        - city
+        - email
+        - createdAt
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID único del usuario
+          example: 550e8400-e29b-41d4-a716-446655440000
+        name:
+          type: string
+          description: Nombre del usuario
+          example: Juan
+        lastname:
+          type: string
+          description: Apellido del usuario
+          example: Pérez
+        username:
+          type: string
+          description: Nombre de usuario único
+          example: juanperez
+        phoneNumber:
+          type: string
+          description: Número de teléfono
+          example: "1234567890"
+        password:
+          type: string
+          description: Contraseña encriptada (no se devuelve en respuestas)
+          example: $2a$10$...
+        createdAt:
+          format: date-time
+          type: string
+          description: Fecha de creación
+          example: "2023-10-01T12:00:00Z"
+        updatedAt:
+          format: date-time
+          type: string
+          description: Fecha de actualización
+          example: "2023-10-02T12:00:00Z"
+        stateId:
+          type: number
+          description: ID del estado del usuario
+          example: 1
+        roleId:
+          type: number
+          description: ID del rol del usuario
+          example: 2
+        shipments:
+          description: Envíos asociados al usuario
+          type: array
+          items:
+            $ref: "#/components/schemas/Shipment"
+      required:
+        - id
+        - name
+        - lastname
+        - username
+        - phoneNumber
+        - password
+        - createdAt
+        - stateId
+        - roleId
+    Shipment:
+      type: object
+      properties:
+        id:
+          type: string
+          description: ID único del envío
+          example: 550e8400-e29b-41d4-a716-446655440002
+        trackingCode:
+          type: string
+          description: Código de rastreo único
+          example: TRK123456789
+        remitterId:
+          type: string
+          description: ID del remitente
+          example: 550e8400-e29b-41d4-a716-446655440001
+        recipientId:
+          type: string
+          description: ID del destinatario
+          example: 550e8400-e29b-41d4-a716-446655440003
+        userId:
+          type: string
+          description: ID del usuario que creó el envío
+          example: 550e8400-e29b-41d4-a716-446655440000
+        remitter:
+          description: Información del remitente
+          allOf:
+            - $ref: "#/components/schemas/Client"
+        recipient:
+          description: Información del destinatario
+          allOf:
+            - $ref: "#/components/schemas/Client"
+        user:
+          description: Información del usuario
+          allOf:
+            - $ref: "#/components/schemas/User"
+        packageDescription:
+          type: string
+          description: Descripción del paquete
+          example: Paquete con documentos importantes
+        sendDate:
+          format: date-time
+          type: string
+          description: Fecha de envío
+          example: "2023-10-01T12:00:00Z"
+        deliveryDate:
+          format: date-time
+          type: string
+          description: Fecha de entrega
+          example: "2023-10-05T12:00:00Z"
+        updatedAt:
+          format: date-time
+          type: string
+          description: Fecha de actualización
+          example: "2023-10-02T12:00:00Z"
+        locationId:
+          type: number
+          description: ID de la ubicación
+          example: 1
+        statusId:
+          type: number
+          description: ID del estado
+          example: 2
+        pdfPath:
+          type: string
+          description: Ruta del archivo PDF
+          example: /uploads/pdfs/shipment-uuid.pdf
+      required:
+        - id
+        - trackingCode
+        - remitterId
+        - recipientId
+        - userId
+        - remitter
+        - recipient
+        - user
+        - packageDescription
+        - sendDate
+        - locationId
+        - statusId
+    UpdateUserDto:
+      type: object
+      properties: {}
+    LoginUserDto:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Nombre de usuario
+          example: juanperez
+        password:
+          type: string
+          description: Contraseña del usuario
+          example: Password123!
+          minLength: 8
+          maxLength: 20
+      required:
+        - username
+        - password
+    LoginResponseDto:
+      type: object
+      properties:
+        token:
+          type: string
+          description: Token JWT para autenticación
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        user:
+          description: Información del usuario autenticado
+          allOf:
+            - $ref: "#/components/schemas/User"
+      required:
+        - token
+        - user
+    CreateShipmentDto:
+      type: object
+      properties:
+        remitterId:
+          type: string
+          description: ID del remitente (cliente)
+          example: 550e8400-e29b-41d4-a716-446655440000
+        recipientId:
+          type: string
+          description: ID del destinatario (cliente)
+          example: 550e8400-e29b-41d4-a716-446655440001
+        userId:
+          type: string
+          description: ID del usuario que crea el envío
+          example: 550e8400-e29b-41d4-a716-446655440002
+        packageDescription:
+          type: string
+          description: Descripción del paquete
+          example: Paquete con documentos importantes
+          maxLength: 100
+      required:
+        - remitterId
+        - recipientId
+        - userId
+        - packageDescription
+    UpdateShipmentDto:
+      type: object
+      properties:
+        packageDescription:
+          type: string
+          description: Descripción del paquete (opcional)
+          example: Paquete actualizado con documentos
+          maxLength: 100
+        locationId:
+          type: number
+          description: ID de la ubicación (opcional)
+          example: 1
+        statusId:
+          type: number
+          description: ID del estado (opcional)
+          example: 2
+    CreateClientDto:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Nombre del cliente
+          example: María
+        lastname:
+          type: string
+          description: Apellido del cliente
+          example: García
+        documentType:
+          type: string
+          description: Tipo de documento
+          example: CC
+        documentNumber:
+          type: string
+          description: Número de documento
+          example: "1234567890"
+        phoneNumber:
+          type: string
+          description: Número de teléfono
+          example: "0987654321"
+        address:
+          type: string
+          description: Dirección
+          example: "Calle 123 #45-67"
+        city:
+          type: string
+          description: Ciudad
+          example: Bogotá
+        email:
+          type: string
+          description: Correo electrónico
+          example: maria.garcia@example.com
+      required:
+        - name
+        - lastname
+        - documentType
+        - documentNumber
+        - phoneNumber
+        - address
+        - city
+        - email
+    UpdateClientDto:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Nombre del cliente
+          example: María
+        lastname:
+          type: string
+          description: Apellido del cliente
+          example: García
+        documentType:
+          type: string
+          description: Tipo de documento
+          example: CC
+        documentNumber:
+          type: string
+          description: Número de documento
+          example: "1234567890"
+        phoneNumber:
+          type: string
+          description: Número de teléfono
+          example: "0987654321"
+        address:
+          type: string
+          description: Dirección
+          example: "Calle 123 #45-67"
+        city:
+          type: string
+          description: Ciudad
+          example: Bogotá
+        email:
+          type: string
+          description: Correo electrónico
+          example: maria.garcia@example.com
