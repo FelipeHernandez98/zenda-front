@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import { useMemo, useState, useEffect } from "react";
 import { Formik } from "formik";
 import * as Yup from "yup";
@@ -20,6 +21,7 @@ import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
 import FormHelperText from "@mui/material/FormHelperText";
 import Select from "@mui/material/Select";
+import InputAdornment from "@mui/material/InputAdornment";
 
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
@@ -144,6 +146,22 @@ const resolvePdfUrl = (pdfPath) => {
   } catch (_error) {
     return cleanPath;
   }
+};
+
+const isHttpUrl = (value) => /^https?:\/\//i.test(value || "");
+
+const isLikelyStorageObjectKey = (value) => {
+  if (!value || typeof value !== "string") {
+    return false;
+  }
+
+  const cleanValue = value.trim();
+  if (!cleanValue) {
+    return false;
+  }
+
+  // Object keys are usually relative (no protocol and no leading slash).
+  return !isHttpUrl(cleanValue) && !cleanValue.startsWith("/");
 };
 
 const getApiBaseUrl = () => {
@@ -277,6 +295,26 @@ const getLocationLabel = (locationId) => {
   return foundLocation?.label || "Sin ubicación";
 };
 
+const formatCopValue = (rawValue) => {
+  const digitsOnly = String(rawValue || "").replace(/\D/g, "");
+
+  if (!digitsOnly) {
+    return "";
+  }
+
+  return Number(digitsOnly).toLocaleString("es-CO");
+};
+
+const normalizeShipmentValueForApi = (rawValue) => {
+  const digitsOnly = String(rawValue || "").replace(/\D/g, "");
+
+  if (!digitsOnly) {
+    return "";
+  }
+
+  return `$${digitsOnly} COP`;
+};
+
 const createShipmentSchema = Yup.object({
   remitterId: Yup.string().trim().required("El remitente es obligatorio"),
   recipientId: Yup.string().trim().required("El destinatario es obligatorio"),
@@ -285,6 +323,10 @@ const createShipmentSchema = Yup.object({
     .trim()
     .required("La descripción del paquete es obligatoria")
     .max(100, "Máximo 100 caracteres"),
+  shipmentValue: Yup.string()
+    .trim()
+    .required("El valor declarado del envío es obligatorio")
+    .max(50, "Máximo 50 caracteres"),
 });
 
 const editShipmentSchema = Yup.object({
@@ -488,6 +530,34 @@ function ShipmentFormDialog({ open, mode, initialValues, onClose, onSubmit, clie
                       fullWidth
                     />
                   </Grid>
+                  {!isEdit && (
+                    <Grid item xs={12} md={6}>
+                      <MDInput
+                        label="Valor declarado del envío"
+                        name="shipmentValue"
+                        value={values.shipmentValue}
+                        onChange={(event) => {
+                          const formattedValue = formatCopValue(event.target.value);
+                          setFieldValue("shipmentValue", formattedValue);
+                        }}
+                        onBlur={handleBlur}
+                        error={Boolean(touched.shipmentValue && errors.shipmentValue)}
+                        helperText={
+                          touched.shipmentValue && errors.shipmentValue ? errors.shipmentValue : ""
+                        }
+                        placeholder="150.000"
+                        fullWidth
+                        inputProps={{
+                          inputMode: "numeric",
+                          maxLength: 50,
+                        }}
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                          endAdornment: <InputAdornment position="end">COP</InputAdornment>,
+                        }}
+                      />
+                    </Grid>
+                  )}
                   {isEdit && (
                     <>
                       <Grid item xs={12} md={6}>
@@ -633,26 +703,22 @@ function Shipments() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedShipmentToDelete, setSelectedShipmentToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [trackingFilter, setTrackingFilter] = useState("");
-  const [activeTrackingFilter, setActiveTrackingFilter] = useState("");
 
   const initialFormValues = {
     remitterId: selectedShipment?.remitterId || "",
     recipientId: selectedShipment?.recipientId || "",
     userId: selectedShipment?.userId || "",
     packageDescription: selectedShipment?.packageDescription || "",
+    shipmentValue: selectedShipment?.shipmentValue || "",
     locationId: selectedShipment?.locationId || "",
     statusId: selectedShipment?.statusId || "",
   };
 
-  const fetchShipments = async (trackingCode = "") => {
+  const fetchShipments = async () => {
     try {
       setLoading(true);
       setError("");
-      const endpoint = trackingCode
-        ? `/api/shipment/tracking/${encodeURIComponent(trackingCode)}`
-        : "/api/shipment";
-      const response = await api.get(endpoint);
+      const response = await api.get("/api/shipment");
       setShipments(normalizeShipmentsResponse(response.data));
     } catch (requestError) {
       setError(requestError.response?.data?.message || "No se pudieron cargar los envíos.");
@@ -662,7 +728,7 @@ function Shipments() {
   };
 
   useEffect(() => {
-    fetchShipments("");
+    fetchShipments();
   }, []);
 
   const fetchClients = async () => {
@@ -709,18 +775,6 @@ function Shipments() {
 
     return () => clearTimeout(timer);
   }, [successMessage, error]);
-
-  const handleSearchByTracking = async () => {
-    const cleanValue = trackingFilter.trim();
-    setActiveTrackingFilter(cleanValue);
-    await fetchShipments(cleanValue);
-  };
-
-  const handleClearFilter = async () => {
-    setTrackingFilter("");
-    setActiveTrackingFilter("");
-    await fetchShipments("");
-  };
 
   const handleOpenCreate = () => {
     setDialogMode("create");
@@ -788,6 +842,7 @@ function Shipments() {
           recipientId: values.recipientId.trim(),
           userId: values.userId.trim(),
           packageDescription: values.packageDescription.trim(),
+          shipmentValue: normalizeShipmentValueForApi(values.shipmentValue),
         };
         const createResponse = await api.post("/api/shipment", payload);
         const createdShipment = normalizeSingleShipmentResponse(createResponse.data);
@@ -810,12 +865,19 @@ function Shipments() {
         }
 
         if (pdfPath) {
-          const resolvedPdfUrl = resolvePdfUrl(pdfPath);
+          const cleanPdfPath = pdfPath.trim();
+          const resolvedPdfUrl = resolvePdfUrl(cleanPdfPath);
           const fileName = getPdfFileName(createdShipment);
 
           try {
-            if (isExternalUrl(resolvedPdfUrl)) {
+            if (isHttpUrl(cleanPdfPath) && isExternalUrl(resolvedPdfUrl)) {
               triggerBrowserDownload(resolvedPdfUrl, fileName);
+            } else if (isLikelyStorageObjectKey(cleanPdfPath) && createdShipment?.id) {
+              const pdfResponse = await api.get(`/api/shipment/${createdShipment.id}/pdf`, {
+                responseType: "blob",
+                suppressGlobalNotification: true,
+              });
+              triggerBlobDownload(pdfResponse.data, fileName);
             } else {
               const pdfBlob = await fetchPdfBlobFromUrl(resolvedPdfUrl);
               triggerBlobDownload(pdfBlob, fileName);
@@ -839,7 +901,7 @@ function Shipments() {
       }
 
       setOpenDialog(false);
-      await fetchShipments(activeTrackingFilter);
+      await fetchShipments();
     } catch (requestError) {
       setError(requestError.response?.data?.message || "No fue posible guardar el envío.");
     } finally {
@@ -859,7 +921,7 @@ function Shipments() {
     try {
       await api.delete(`/api/shipment/${selectedShipmentToDelete.id}`);
       setSuccessMessage("El envío se eliminó correctamente.");
-      await fetchShipments(activeTrackingFilter);
+      await fetchShipments();
       handleCloseDeleteDialog();
     } catch (requestError) {
       setError(requestError.response?.data?.message || "No fue posible eliminar el envío.");
@@ -888,12 +950,20 @@ function Shipments() {
       }
 
       if (pdfPath) {
-        const resolvedPdfUrl = resolvePdfUrl(pdfPath);
+        const cleanPdfPath = pdfPath.trim();
+        const resolvedPdfUrl = resolvePdfUrl(cleanPdfPath);
         let guideOpenedFromPdfPath = false;
 
         try {
-          if (isExternalUrl(resolvedPdfUrl)) {
+          if (isHttpUrl(cleanPdfPath) && isExternalUrl(resolvedPdfUrl)) {
             window.open(resolvedPdfUrl, "_blank", "noopener,noreferrer");
+            guideOpenedFromPdfPath = true;
+          } else if (isLikelyStorageObjectKey(cleanPdfPath)) {
+            const pdfResponse = await api.get(`/api/shipment/${shipment.id}/pdf`, {
+              responseType: "blob",
+              suppressGlobalNotification: true,
+            });
+            openPdfBlobInNewTab(pdfResponse.data);
             guideOpenedFromPdfPath = true;
           } else {
             const pdfBlob = await fetchPdfBlobFromUrl(resolvedPdfUrl);
@@ -921,12 +991,105 @@ function Shipments() {
 
   const columns = useMemo(
     () => [
-      { Header: "tracking", accessor: "tracking", align: "left" },
-      { Header: "detalle", accessor: "detail", align: "left" },
-      { Header: "estado", accessor: "status", align: "center" },
-      { Header: "ubicación", accessor: "location", align: "center" },
-      { Header: "fecha", accessor: "date", align: "center" },
-      { Header: "acciones", accessor: "actions", align: "center" },
+      {
+        Header: "tracking",
+        accessor: "tracking",
+        align: "left",
+        Cell: ({ row }) => (
+          <MDBox lineHeight={1}>
+            <MDTypography display="block" variant="button" fontWeight="medium">
+              {row.original.raw.trackingCode || "-"}
+            </MDTypography>
+            <MDTypography variant="caption" color="text">
+              {row.original.raw.id}
+            </MDTypography>
+          </MDBox>
+        ),
+      },
+      {
+        Header: "detalle",
+        accessor: "detail",
+        align: "left",
+        Cell: ({ row }) => (
+          <MDBox lineHeight={1}>
+            <MDTypography variant="caption" color="text" fontWeight="medium" display="block">
+              {row.original.raw.packageDescription || "-"}
+            </MDTypography>
+            <MDTypography variant="caption" color="text">
+              Remitente: {row.original.raw.remitterId || "-"} | Destinatario:{" "}
+              {row.original.raw.recipientId || "-"}
+            </MDTypography>
+          </MDBox>
+        ),
+      },
+      {
+        Header: "estado",
+        accessor: "status",
+        align: "center",
+        Cell: ({ row }) => (
+          <MDBox ml={-1} display="flex" justifyContent="center">
+            <MDBadge
+              badgeContent={getStatusLabel(row.original.raw.statusId)}
+              color={getStatusColor(row.original.raw.statusId)}
+              variant="gradient"
+              size="sm"
+            />
+          </MDBox>
+        ),
+      },
+      {
+        Header: "ubicación",
+        accessor: "location",
+        align: "center",
+        Cell: ({ row }) => (
+          <MDTypography variant="caption" color="text" fontWeight="medium">
+            {getLocationLabel(row.original.raw.locationId)}
+          </MDTypography>
+        ),
+      },
+      {
+        Header: "fecha",
+        accessor: "date",
+        align: "center",
+        Cell: ({ row }) => (
+          <MDTypography variant="caption" color="text" fontWeight="medium">
+            {row.original.raw.sendDate
+              ? new Date(row.original.raw.sendDate).toLocaleDateString()
+              : "-"}
+          </MDTypography>
+        ),
+      },
+      {
+        Header: "acciones",
+        accessor: "actions",
+        align: "center",
+        disableSortBy: true,
+        Cell: ({ row }) => (
+          <MDBox display="flex" alignItems="center" justifyContent="center" gap={0.5}>
+            <IconButton
+              color="dark"
+              onClick={() => handleOpenShipmentGuide(row.original.raw)}
+              aria-label={`Ver guía de envío ${row.original.raw.trackingCode || ""}`}
+            >
+              <Icon>picture_as_pdf</Icon>
+            </IconButton>
+            <IconButton
+              color="info"
+              onClick={() => handleOpenEdit(row.original.raw)}
+              aria-label={`Editar envío ${row.original.raw.trackingCode || ""}`}
+            >
+              <Icon>edit</Icon>
+            </IconButton>
+            <IconButton
+              color="error"
+              onClick={() => handleOpenDeleteDialog(row.original.raw)}
+              aria-label={`Eliminar envío ${row.original.raw.trackingCode || ""}`}
+            >
+              <Icon>delete</Icon>
+            </IconButton>
+          </MDBox>
+        ),
+      },
     ],
     []
   );
@@ -934,71 +1097,15 @@ function Shipments() {
   const rows = useMemo(
     () =>
       shipments.map((shipment) => ({
-        tracking: (
-          <MDBox lineHeight={1}>
-            <MDTypography display="block" variant="button" fontWeight="medium">
-              {shipment.trackingCode || "-"}
-            </MDTypography>
-            <MDTypography variant="caption" color="text">
-              {shipment.id}
-            </MDTypography>
-          </MDBox>
-        ),
-        detail: (
-          <MDBox lineHeight={1}>
-            <MDTypography variant="caption" color="text" fontWeight="medium" display="block">
-              {shipment.packageDescription || "-"}
-            </MDTypography>
-            <MDTypography variant="caption" color="text">
-              Remitente: {shipment.remitterId || "-"} | Destinatario: {shipment.recipientId || "-"}
-            </MDTypography>
-          </MDBox>
-        ),
-        status: (
-          <MDBox ml={-1} display="flex" justifyContent="center">
-            <MDBadge
-              badgeContent={getStatusLabel(shipment.statusId)}
-              color={getStatusColor(shipment.statusId)}
-              variant="gradient"
-              size="sm"
-            />
-          </MDBox>
-        ),
-        location: (
-          <MDTypography variant="caption" color="text" fontWeight="medium">
-            {getLocationLabel(shipment.locationId)}
-          </MDTypography>
-        ),
-        date: (
-          <MDTypography variant="caption" color="text" fontWeight="medium">
-            {shipment.sendDate ? new Date(shipment.sendDate).toLocaleDateString() : "-"}
-          </MDTypography>
-        ),
-        actions: (
-          <MDBox display="flex" alignItems="center" justifyContent="center" gap={0.5}>
-            <IconButton
-              color="dark"
-              onClick={() => handleOpenShipmentGuide(shipment)}
-              aria-label={`Ver guía de envío ${shipment.trackingCode || ""}`}
-            >
-              <Icon>picture_as_pdf</Icon>
-            </IconButton>
-            <IconButton
-              color="info"
-              onClick={() => handleOpenEdit(shipment)}
-              aria-label={`Editar envío ${shipment.trackingCode || ""}`}
-            >
-              <Icon>edit</Icon>
-            </IconButton>
-            <IconButton
-              color="error"
-              onClick={() => handleOpenDeleteDialog(shipment)}
-              aria-label={`Eliminar envío ${shipment.trackingCode || ""}`}
-            >
-              <Icon>delete</Icon>
-            </IconButton>
-          </MDBox>
-        ),
+        raw: shipment,
+        tracking: `${shipment.trackingCode || ""} ${shipment.id || ""}`.trim(),
+        detail: `${shipment.packageDescription || ""} ${shipment.remitterId || ""} ${
+          shipment.recipientId || ""
+        }`.trim(),
+        status: getStatusLabel(shipment.statusId),
+        location: getLocationLabel(shipment.locationId),
+        date: shipment.sendDate ? new Date(shipment.sendDate).toLocaleDateString() : "",
+        actions: "",
       })),
     [shipments]
   );
@@ -1041,28 +1148,6 @@ function Shipments() {
                 <MDButton variant="gradient" color="dark" onClick={handleOpenCreate}>
                   Nuevo envío
                 </MDButton>
-              </MDBox>
-
-              <MDBox px={3} pt={3} display="flex" gap={1} alignItems="center" flexWrap="wrap">
-                <MDBox width={{ xs: "100%", sm: "15rem" }}>
-                  <MDInput
-                    label="Buscar por tracking code"
-                    value={trackingFilter}
-                    onChange={(event) => setTrackingFilter(event.target.value)}
-                    fullWidth
-                  />
-                </MDBox>
-                <MDButton variant="gradient" color="info" onClick={handleSearchByTracking}>
-                  Buscar
-                </MDButton>
-                <MDButton variant="outlined" color="secondary" onClick={handleClearFilter}>
-                  Limpiar
-                </MDButton>
-                {activeTrackingFilter && (
-                  <MDTypography variant="caption" color="text">
-                    Filtro activo: tracking {activeTrackingFilter}
-                  </MDTypography>
-                )}
               </MDBox>
 
               <MDBox pt={3}>
@@ -1134,6 +1219,7 @@ ShipmentFormDialog.propTypes = {
     recipientId: PropTypes.string,
     userId: PropTypes.string,
     packageDescription: PropTypes.string,
+    shipmentValue: PropTypes.string,
     locationId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
     statusId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   }).isRequired,

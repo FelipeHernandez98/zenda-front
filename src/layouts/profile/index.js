@@ -1,203 +1,389 @@
-/**
-=========================================================
-* Material Dashboard 2 React - v2.2.0
-=========================================================
+import { useEffect, useMemo, useState } from "react";
+import { Formik } from "formik";
+import * as Yup from "yup";
 
-* Product Page: https://www.creative-tim.com/product/material-dashboard-react
-* Copyright 2023 Creative Tim (https://www.creative-tim.com)
-
-Coded by www.creative-tim.com
-
- =========================================================
-
-* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-*/
-
-// @mui material components
 import Grid from "@mui/material/Grid";
-import Divider from "@mui/material/Divider";
+import Card from "@mui/material/Card";
+import Alert from "@mui/material/Alert";
+import CircularProgress from "@mui/material/CircularProgress";
 
-// @mui icons
-import FacebookIcon from "@mui/icons-material/Facebook";
-import TwitterIcon from "@mui/icons-material/Twitter";
-import InstagramIcon from "@mui/icons-material/Instagram";
-
-// Material Dashboard 2 React components
 import MDBox from "components/MDBox";
 import MDTypography from "components/MDTypography";
+import MDInput from "components/MDInput";
+import MDButton from "components/MDButton";
 
-// Material Dashboard 2 React example components
 import DashboardLayout from "examples/LayoutContainers/DashboardLayout";
 import DashboardNavbar from "examples/Navbars/DashboardNavbar";
 import Footer from "examples/Footer";
-import ProfileInfoCard from "examples/Cards/InfoCards/ProfileInfoCard";
-import ProfilesList from "examples/Lists/ProfilesList";
-import DefaultProjectCard from "examples/Cards/ProjectCards/DefaultProjectCard";
 
-// Overview page components
-import Header from "layouts/profile/components/Header";
-import PlatformSettings from "layouts/profile/components/PlatformSettings";
+import api from "services/api";
+import { useAuth } from "context/AuthContext";
 
-// Data
-import profilesListData from "layouts/profile/data/profilesListData";
+const decodeTokenPayload = (token) => {
+  if (!token) {
+    return null;
+  }
 
-// Images
-import homeDecor1 from "assets/images/home-decor-1.jpg";
-import homeDecor2 from "assets/images/home-decor-2.jpg";
-import homeDecor3 from "assets/images/home-decor-3.jpg";
-import homeDecor4 from "assets/images/home-decor-4.jpeg";
-import team1 from "assets/images/team-1.jpg";
-import team2 from "assets/images/team-2.jpg";
-import team3 from "assets/images/team-3.jpg";
-import team4 from "assets/images/team-4.jpg";
+  try {
+    const tokenParts = token.split(".");
+    if (tokenParts.length < 2) {
+      return null;
+    }
 
-function Overview() {
+    const payloadBase64 = tokenParts[1].replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(atob(payloadBase64));
+  } catch (_error) {
+    return null;
+  }
+};
+
+const getUserIdFromToken = (token) => {
+  const payload = decodeTokenPayload(token);
+  const possibleId = payload?.id ?? payload?.userId ?? payload?.sub ?? payload?.user?.id ?? null;
+
+  if (typeof possibleId === "string" && possibleId.trim()) {
+    return possibleId.trim();
+  }
+
+  return null;
+};
+
+const formatDateTime = (dateValue) => {
+  if (!dateValue) {
+    return "-";
+  }
+
+  const parsedDate = new Date(dateValue);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return "-";
+  }
+
+  return parsedDate.toLocaleString();
+};
+
+const passwordSchema = Yup.object({
+  password: Yup.string()
+    .required("La contraseña es obligatoria")
+    .min(8, "Mínimo 8 caracteres")
+    .max(20, "Máximo 20 caracteres"),
+  confirmPassword: Yup.string()
+    .required("Confirma la contraseña")
+    .oneOf([Yup.ref("password")], "Las contraseñas no coinciden"),
+});
+
+const ROLE_LABELS = {
+  0: "Administrador",
+  1: "Usuario",
+};
+
+const STATUS_LABELS = {
+  0: "Inactivo",
+  1: "Activo",
+  2: "Entregado",
+  3: "Cancelado",
+  4: "Retrasado",
+  5: "Pendiente",
+};
+
+const getRoleLabel = (roleId) => {
+  const parsedRoleId = Number(roleId);
+
+  if (Number.isNaN(parsedRoleId)) {
+    return "Sin rol";
+  }
+
+  return ROLE_LABELS[parsedRoleId] || "Sin rol";
+};
+
+const getStatusLabel = (stateId) => {
+  const parsedStateId = Number(stateId);
+
+  if (Number.isNaN(parsedStateId)) {
+    return "Sin estado";
+  }
+
+  return STATUS_LABELS[parsedStateId] || "Sin estado";
+};
+
+function Profile() {
+  const { token, user: authUser, checkAuthStatus } = useAuth();
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  const userId = useMemo(() => {
+    return getUserIdFromToken(token) || authUser?.id || "";
+  }, [token, authUser]);
+
+  const fetchProfile = async () => {
+    if (!userId) {
+      setLoading(false);
+      setError("No fue posible identificar el usuario desde el token.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError("");
+      const response = await api.get(`/api/user/id/${userId}`);
+      setProfile(response.data || null);
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "No fue posible cargar el perfil.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfile();
+  }, [userId]);
+
+  useEffect(() => {
+    if (!successMessage && !error) {
+      return undefined;
+    }
+
+    const timer = setTimeout(() => {
+      setSuccessMessage("");
+      setError("");
+    }, 4500);
+
+    return () => clearTimeout(timer);
+  }, [successMessage, error]);
+
+  const handlePasswordSubmit = async (values, { setSubmitting, resetForm }) => {
+    if (!userId) {
+      setError("No fue posible identificar el usuario para actualizar la contraseña.");
+      setSubmitting(false);
+      return;
+    }
+
+    try {
+      setError("");
+      setSuccessMessage("");
+
+      await api.patch(`/api/user/${userId}`, {
+        password: values.password,
+      });
+
+      setSuccessMessage("Contraseña actualizada correctamente.");
+      resetForm();
+      await Promise.resolve(checkAuthStatus?.());
+      await fetchProfile();
+    } catch (requestError) {
+      setError(requestError.response?.data?.message || "No fue posible actualizar la contraseña.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <DashboardLayout>
       <DashboardNavbar />
-      <MDBox mb={2} />
-      <Header>
-        <MDBox mt={5} mb={3}>
-          <Grid container spacing={1}>
-            <Grid item xs={12} md={6} xl={4}>
-              <PlatformSettings />
-            </Grid>
-            <Grid item xs={12} md={6} xl={4} sx={{ display: "flex" }}>
-              <Divider orientation="vertical" sx={{ ml: -2, mr: 1 }} />
-              <ProfileInfoCard
-                title="profile information"
-                description="Hi, I’m Alec Thompson, Decisions: If you can’t decide, the answer is no. If two equally difficult paths, choose the one more painful in the short term (pain avoidance is creating an illusion of equality)."
-                info={{
-                  fullName: "Alec M. Thompson",
-                  mobile: "(44) 123 1234 123",
-                  email: "alecthompson@mail.com",
-                  location: "USA",
-                }}
-                social={[
-                  {
-                    link: "https://www.facebook.com/CreativeTim/",
-                    icon: <FacebookIcon />,
-                    color: "facebook",
-                  },
-                  {
-                    link: "https://twitter.com/creativetim",
-                    icon: <TwitterIcon />,
-                    color: "twitter",
-                  },
-                  {
-                    link: "https://www.instagram.com/creativetimofficial/",
-                    icon: <InstagramIcon />,
-                    color: "instagram",
-                  },
-                ]}
-                action={{ route: "", tooltip: "Edit Profile" }}
-                shadow={false}
-              />
-              <Divider orientation="vertical" sx={{ mx: 0 }} />
-            </Grid>
-            <Grid item xs={12} xl={4}>
-              <ProfilesList title="conversations" profiles={profilesListData} shadow={false} />
-            </Grid>
+      <MDBox pt={6} pb={3}>
+        <Grid container spacing={3}>
+          <Grid item xs={12}>
+            {error && (
+              <MDBox mb={2}>
+                <Alert severity="error">{error}</Alert>
+              </MDBox>
+            )}
+            {successMessage && (
+              <MDBox mb={2}>
+                <Alert severity="success">{successMessage}</Alert>
+              </MDBox>
+            )}
           </Grid>
-        </MDBox>
-        <MDBox pt={2} px={2} lineHeight={1.25}>
-          <MDTypography variant="h6" fontWeight="medium">
-            Projects
-          </MDTypography>
-          <MDBox mb={1}>
-            <MDTypography variant="button" color="text">
-              Architects design houses
-            </MDTypography>
-          </MDBox>
-        </MDBox>
-        <MDBox p={2}>
-          <Grid container spacing={6}>
-            <Grid item xs={12} md={6} xl={3}>
-              <DefaultProjectCard
-                image={homeDecor1}
-                label="project #2"
-                title="modern"
-                description="As Uber works through a huge amount of internal management turmoil."
-                action={{
-                  type: "internal",
-                  route: "/pages/profile/profile-overview",
-                  color: "info",
-                  label: "view project",
-                }}
-                authors={[
-                  { image: team1, name: "Elena Morison" },
-                  { image: team2, name: "Ryan Milly" },
-                  { image: team3, name: "Nick Daniel" },
-                  { image: team4, name: "Peterson" },
-                ]}
-              />
-            </Grid>
-            <Grid item xs={12} md={6} xl={3}>
-              <DefaultProjectCard
-                image={homeDecor2}
-                label="project #1"
-                title="scandinavian"
-                description="Music is something that everyone has their own specific opinion about."
-                action={{
-                  type: "internal",
-                  route: "/pages/profile/profile-overview",
-                  color: "info",
-                  label: "view project",
-                }}
-                authors={[
-                  { image: team3, name: "Nick Daniel" },
-                  { image: team4, name: "Peterson" },
-                  { image: team1, name: "Elena Morison" },
-                  { image: team2, name: "Ryan Milly" },
-                ]}
-              />
-            </Grid>
-            <Grid item xs={12} md={6} xl={3}>
-              <DefaultProjectCard
-                image={homeDecor3}
-                label="project #3"
-                title="minimalist"
-                description="Different people have different taste, and various types of music."
-                action={{
-                  type: "internal",
-                  route: "/pages/profile/profile-overview",
-                  color: "info",
-                  label: "view project",
-                }}
-                authors={[
-                  { image: team4, name: "Peterson" },
-                  { image: team3, name: "Nick Daniel" },
-                  { image: team2, name: "Ryan Milly" },
-                  { image: team1, name: "Elena Morison" },
-                ]}
-              />
-            </Grid>
-            <Grid item xs={12} md={6} xl={3}>
-              <DefaultProjectCard
-                image={homeDecor4}
-                label="project #4"
-                title="gothic"
-                description="Why would anyone pick blue over pink? Pink is obviously a better color."
-                action={{
-                  type: "internal",
-                  route: "/pages/profile/profile-overview",
-                  color: "info",
-                  label: "view project",
-                }}
-                authors={[
-                  { image: team4, name: "Peterson" },
-                  { image: team3, name: "Nick Daniel" },
-                  { image: team2, name: "Ryan Milly" },
-                  { image: team1, name: "Elena Morison" },
-                ]}
-              />
-            </Grid>
+
+          <Grid item xs={12} lg={7}>
+            <Card>
+              <MDBox
+                mx={2}
+                mt={-3}
+                py={2}
+                px={2}
+                variant="gradient"
+                bgColor="info"
+                borderRadius="lg"
+                coloredShadow="info"
+              >
+                <MDTypography variant="h6" color="white">
+                  Perfil de usuario
+                </MDTypography>
+              </MDBox>
+
+              <MDBox p={3}>
+                {loading ? (
+                  <MDBox display="flex" justifyContent="center" alignItems="center" py={6}>
+                    <CircularProgress color="info" />
+                  </MDBox>
+                ) : (
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={6}>
+                      <MDTypography variant="caption" color="text" display="block">
+                        ID
+                      </MDTypography>
+                      <MDTypography variant="button" color="dark" fontWeight="medium">
+                        {profile?.id || "-"}
+                      </MDTypography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <MDTypography variant="caption" color="text" display="block">
+                        Username
+                      </MDTypography>
+                      <MDTypography variant="button" color="dark" fontWeight="medium">
+                        {profile?.username || "-"}
+                      </MDTypography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <MDTypography variant="caption" color="text" display="block">
+                        Nombre
+                      </MDTypography>
+                      <MDTypography variant="button" color="dark" fontWeight="medium">
+                        {profile?.name || "-"}
+                      </MDTypography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <MDTypography variant="caption" color="text" display="block">
+                        Apellido
+                      </MDTypography>
+                      <MDTypography variant="button" color="dark" fontWeight="medium">
+                        {profile?.lastname || "-"}
+                      </MDTypography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <MDTypography variant="caption" color="text" display="block">
+                        Teléfono
+                      </MDTypography>
+                      <MDTypography variant="button" color="dark" fontWeight="medium">
+                        {profile?.phoneNumber || "-"}
+                      </MDTypography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <MDTypography variant="caption" color="text" display="block">
+                        Estado (stateId)
+                      </MDTypography>
+                      <MDTypography variant="button" color="dark" fontWeight="medium">
+                        {getStatusLabel(profile?.stateId)}
+                      </MDTypography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <MDTypography variant="caption" color="text" display="block">
+                        Rol (roleId)
+                      </MDTypography>
+                      <MDTypography variant="button" color="dark" fontWeight="medium">
+                        {getRoleLabel(profile?.roleId)}
+                      </MDTypography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <MDTypography variant="caption" color="text" display="block">
+                        Fecha creación
+                      </MDTypography>
+                      <MDTypography variant="button" color="dark" fontWeight="medium">
+                        {formatDateTime(profile?.createdAt)}
+                      </MDTypography>
+                    </Grid>
+                    <Grid item xs={12} md={6}>
+                      <MDTypography variant="caption" color="text" display="block">
+                        Última actualización
+                      </MDTypography>
+                      <MDTypography variant="button" color="dark" fontWeight="medium">
+                        {formatDateTime(profile?.updatedAt)}
+                      </MDTypography>
+                    </Grid>
+                  </Grid>
+                )}
+              </MDBox>
+            </Card>
           </Grid>
-        </MDBox>
-      </Header>
+
+          <Grid item xs={12} lg={5}>
+            <Card>
+              <MDBox
+                mx={2}
+                mt={-3}
+                py={2}
+                px={2}
+                variant="gradient"
+                bgColor="dark"
+                borderRadius="lg"
+                coloredShadow="dark"
+              >
+                <MDTypography variant="h6" color="white">
+                  Cambiar contraseña
+                </MDTypography>
+              </MDBox>
+
+              <MDBox p={3}>
+                <Formik
+                  initialValues={{ password: "", confirmPassword: "" }}
+                  validationSchema={passwordSchema}
+                  onSubmit={handlePasswordSubmit}
+                >
+                  {({
+                    values,
+                    errors,
+                    touched,
+                    handleChange,
+                    handleBlur,
+                    handleSubmit,
+                    isSubmitting,
+                  }) => (
+                    <MDBox component="form" onSubmit={handleSubmit}>
+                      <MDBox mb={2}>
+                        <MDInput
+                          type="password"
+                          label="Nueva contraseña"
+                          name="password"
+                          value={values.password}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          error={Boolean(touched.password && errors.password)}
+                          helperText={touched.password && errors.password ? errors.password : ""}
+                          fullWidth
+                        />
+                      </MDBox>
+
+                      <MDBox mb={2}>
+                        <MDInput
+                          type="password"
+                          label="Confirmar contraseña"
+                          name="confirmPassword"
+                          value={values.confirmPassword}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          error={Boolean(touched.confirmPassword && errors.confirmPassword)}
+                          helperText={
+                            touched.confirmPassword && errors.confirmPassword
+                              ? errors.confirmPassword
+                              : ""
+                          }
+                          fullWidth
+                        />
+                      </MDBox>
+
+                      <MDButton
+                        variant="gradient"
+                        color="info"
+                        type="submit"
+                        disabled={isSubmitting || !userId}
+                        fullWidth
+                      >
+                        {isSubmitting ? "Actualizando..." : "Actualizar contraseña"}
+                      </MDButton>
+                    </MDBox>
+                  )}
+                </Formik>
+              </MDBox>
+            </Card>
+          </Grid>
+        </Grid>
+      </MDBox>
       <Footer />
     </DashboardLayout>
   );
 }
 
-export default Overview;
+export default Profile;

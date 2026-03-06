@@ -18,7 +18,7 @@ import { Formik } from "formik";
 import * as Yup from "yup";
 
 // react-router-dom components
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 // @mui material components
 import Card from "@mui/material/Card";
@@ -159,21 +159,6 @@ function Basic() {
                   >
                     {isSubmitting ? "Signing in..." : "sign in"}
                   </MDButton>
-                </MDBox>
-                <MDBox mt={3} mb={1} textAlign="center">
-                  <MDTypography variant="button" color="text">
-                    Don&apos;t have an account?{" "}
-                    <MDTypography
-                      component={Link}
-                      to="/authentication/sign-up"
-                      variant="button"
-                      color="info"
-                      fontWeight="medium"
-                      textGradient
-                    >
-                      Sign up
-                    </MDTypography>
-                  </MDTypography>
                 </MDBox>
               </MDBox>
             )}

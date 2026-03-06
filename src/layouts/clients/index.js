@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import { useMemo, useState, useEffect } from "react";
 import { Formik } from "formik";
 import * as Yup from "yup";
@@ -486,11 +487,84 @@ function Clients() {
 
   const columns = useMemo(
     () => [
-      { Header: "nombre", accessor: "name", align: "left" },
-      { Header: "documento", accessor: "document", align: "left" },
-      { Header: "contacto", accessor: "contact", align: "left" },
-      { Header: "ciudad", accessor: "city", align: "left" },
-      { Header: "acciones", accessor: "actions", align: "center" },
+      {
+        Header: "nombre",
+        accessor: "name",
+        align: "left",
+        Cell: ({ row }) => (
+          <MDBox lineHeight={1}>
+            <MDTypography display="block" variant="button" fontWeight="medium">
+              {`${row.original.raw.name || ""} ${row.original.raw.lastname || ""}`.trim()}
+            </MDTypography>
+            <MDTypography variant="caption" color="text">
+              {row.original.raw.id}
+            </MDTypography>
+          </MDBox>
+        ),
+      },
+      {
+        Header: "documento",
+        accessor: "document",
+        align: "left",
+        Cell: ({ row }) => (
+          <MDTypography variant="caption" color="text" fontWeight="medium">
+            {`${row.original.raw.documentType || ""} ${row.original.raw.documentNumber || ""}`.trim()}
+          </MDTypography>
+        ),
+      },
+      {
+        Header: "contacto",
+        accessor: "contact",
+        align: "left",
+        Cell: ({ row }) => (
+          <MDBox lineHeight={1}>
+            <MDTypography variant="caption" color="text" fontWeight="medium" display="block">
+              {row.original.raw.phoneNumber || "-"}
+            </MDTypography>
+            <MDTypography variant="caption" color="text">
+              {row.original.raw.email || "-"}
+            </MDTypography>
+          </MDBox>
+        ),
+      },
+      {
+        Header: "ciudad",
+        accessor: "city",
+        align: "left",
+        Cell: ({ row }) => (
+          <MDTypography variant="caption" color="text" fontWeight="medium">
+            {row.original.raw.city || "-"}
+          </MDTypography>
+        ),
+      },
+      {
+        Header: "acciones",
+        accessor: "actions",
+        align: "center",
+        disableSortBy: true,
+        Cell: ({ row }) => (
+          <MDBox display="flex" alignItems="center" justifyContent="center" gap={0.5}>
+            <IconButton
+              color="info"
+              onClick={() => handleOpenEdit(row.original.raw)}
+              aria-label={`Editar cliente ${row.original.raw.name || ""} ${
+                row.original.raw.lastname || ""
+              }`}
+            >
+              <Icon>edit</Icon>
+            </IconButton>
+            <IconButton
+              color="error"
+              onClick={() => handleOpenDeleteDialog(row.original.raw)}
+              aria-label={`Eliminar cliente ${row.original.raw.name || ""} ${
+                row.original.raw.lastname || ""
+              }`}
+            >
+              <Icon>delete</Icon>
+            </IconButton>
+          </MDBox>
+        ),
+      },
     ],
     []
   );
@@ -498,54 +572,12 @@ function Clients() {
   const rows = useMemo(
     () =>
       clients.map((client) => ({
-        name: (
-          <MDBox lineHeight={1}>
-            <MDTypography display="block" variant="button" fontWeight="medium">
-              {`${client.name || ""} ${client.lastname || ""}`.trim()}
-            </MDTypography>
-            <MDTypography variant="caption" color="text">
-              {client.id}
-            </MDTypography>
-          </MDBox>
-        ),
-        document: (
-          <MDTypography variant="caption" color="text" fontWeight="medium">
-            {`${client.documentType || ""} ${client.documentNumber || ""}`.trim()}
-          </MDTypography>
-        ),
-        contact: (
-          <MDBox lineHeight={1}>
-            <MDTypography variant="caption" color="text" fontWeight="medium" display="block">
-              {client.phoneNumber || "-"}
-            </MDTypography>
-            <MDTypography variant="caption" color="text">
-              {client.email || "-"}
-            </MDTypography>
-          </MDBox>
-        ),
-        city: (
-          <MDTypography variant="caption" color="text" fontWeight="medium">
-            {client.city || "-"}
-          </MDTypography>
-        ),
-        actions: (
-          <MDBox display="flex" alignItems="center" justifyContent="center" gap={0.5}>
-            <IconButton
-              color="info"
-              onClick={() => handleOpenEdit(client)}
-              aria-label={`Editar cliente ${client.name || ""} ${client.lastname || ""}`}
-            >
-              <Icon>edit</Icon>
-            </IconButton>
-            <IconButton
-              color="error"
-              onClick={() => handleOpenDeleteDialog(client)}
-              aria-label={`Eliminar cliente ${client.name || ""} ${client.lastname || ""}`}
-            >
-              <Icon>delete</Icon>
-            </IconButton>
-          </MDBox>
-        ),
+        raw: client,
+        name: `${client.name || ""} ${client.lastname || ""} ${client.id || ""}`.trim(),
+        document: `${client.documentType || ""} ${client.documentNumber || ""}`.trim(),
+        contact: `${client.phoneNumber || ""} ${client.email || ""}`.trim(),
+        city: client.city || "",
+        actions: "",
       })),
     [clients]
   );

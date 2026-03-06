@@ -633,14 +633,14 @@ function RastreoGuia() {
                 <MDBox mt={2} display="flex" alignItems="center" gap={1}>
                   <Icon sx={{ color: BRAND_COLORS.gold }}>call</Icon>
                   <MDTypography variant="button" color="dark" fontWeight="bold">
-                    Línea nacional: 123456789
+                    Línea WhatsApp: 3018047162
                   </MDTypography>
                 </MDBox>
 
                 <MDBox mt={2}>
                   <MDButton
                     component="a"
-                    href="https://wa.me/573123456789"
+                    href="https://wa.me/573018047162"
                     target="_blank"
                     rel="noreferrer"
                     variant="contained"

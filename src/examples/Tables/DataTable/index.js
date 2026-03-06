@@ -39,6 +39,48 @@ import MDPagination from "components/MDPagination";
 import DataTableHeadCell from "examples/Tables/DataTable/DataTableHeadCell";
 import DataTableBodyCell from "examples/Tables/DataTable/DataTableBodyCell";
 
+const normalizeSearchText = (value) =>
+  String(value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+const flattenSearchableValues = (value) => {
+  if (value === null || value === undefined) {
+    return [];
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => flattenSearchableValues(item));
+  }
+
+  if (typeof value === "object") {
+    return Object.values(value).flatMap((item) => flattenSearchableValues(item));
+  }
+
+  return [value];
+};
+
+const globalSearchFilter = (rows, columnIds, filterValue) => {
+  const normalizedFilter = normalizeSearchText(filterValue);
+
+  if (!normalizedFilter) {
+    return rows;
+  }
+
+  return rows.filter((row) => {
+    const columnValues = columnIds.flatMap((columnId) =>
+      flattenSearchableValues(row.values?.[columnId])
+    );
+    const originalValues = flattenSearchableValues(row.original);
+
+    return [...columnValues, ...originalValues].some((value) =>
+      normalizeSearchText(value).includes(normalizedFilter)
+    );
+  });
+};
+
 function DataTable({
   entriesPerPage,
   canSearch,
@@ -56,7 +98,7 @@ function DataTable({
   const data = useMemo(() => table.rows, [table]);
 
   const tableInstance = useTable(
-    { columns, data, initialState: { pageIndex: 0 } },
+    { columns, data, initialState: { pageIndex: 0 }, globalFilter: globalSearchFilter },
     useGlobalFilter,
     useSortBy,
     usePagination
@@ -109,7 +151,11 @@ function DataTable({
   const handleInputPaginationValue = ({ target: value }) => gotoPage(Number(value.value - 1));
 
   // Search input value state
-  const [search, setSearch] = useState(globalFilter);
+  const [search, setSearch] = useState(globalFilter || "");
+
+  useEffect(() => {
+    setSearch(globalFilter || "");
+  }, [globalFilter]);
 
   // Search input state handle
   const onSearchChange = useAsyncDebounce((value) => {
@@ -175,7 +221,7 @@ function DataTable({
                 size="small"
                 fullWidth
                 onChange={({ currentTarget }) => {
-                  setSearch(search);
+                  setSearch(currentTarget.value);
                   onSearchChange(currentTarget.value);
                 }}
               />

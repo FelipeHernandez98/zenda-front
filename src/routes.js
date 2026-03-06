@@ -37,12 +37,10 @@ Coded by www.creative-tim.com
 
 // Material Dashboard 2 React layouts
 import Dashboard from "layouts/dashboard";
-import Profile from "layouts/profile";
 import Users from "layouts/users";
 import Clients from "layouts/clients";
 import Shipments from "layouts/shipments";
 import SignIn from "layouts/authentication/sign-in";
-import SignUp from "layouts/authentication/sign-up";
 
 // @mui icons
 import Icon from "@mui/material/Icon";
@@ -59,14 +57,6 @@ const routes = [
     type: "title",
     title: "Operación",
     key: "operations-title",
-  },
-  {
-    type: "collapse",
-    name: "Profile",
-    key: "profile",
-    icon: <Icon fontSize="small">person</Icon>,
-    route: "/profile",
-    component: <Profile />,
   },
   {
     type: "collapse",
@@ -112,14 +102,6 @@ const routes = [
     icon: <Icon fontSize="small">login</Icon>,
     route: "/authentication/sign-in",
     component: <SignIn />,
-  },
-  {
-    type: "auth",
-    name: "Sign Up",
-    key: "sign-up",
-    icon: <Icon fontSize="small">assignment</Icon>,
-    route: "/authentication/sign-up",
-    component: <SignUp />,
   },
 ];
 

@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 import { useMemo, useState, useEffect } from "react";
 import { Formik } from "formik";
 import * as Yup from "yup";
@@ -399,11 +400,80 @@ function Users() {
 
   const columns = useMemo(
     () => [
-      { Header: "nombre", accessor: "name", align: "left" },
-      { Header: "usuario", accessor: "username", align: "left" },
-      { Header: "teléfono", accessor: "phoneNumber", align: "left" },
-      { Header: "estado", accessor: "state", align: "center" },
-      { Header: "acciones", accessor: "actions", align: "center" },
+      {
+        Header: "nombre",
+        accessor: "name",
+        align: "left",
+        Cell: ({ row }) => (
+          <MDBox lineHeight={1}>
+            <MDTypography display="block" variant="button" fontWeight="medium">
+              {`${row.original.raw.name || ""} ${row.original.raw.lastname || ""}`.trim()}
+            </MDTypography>
+            <MDTypography variant="caption" color="text">
+              {row.original.raw.id}
+            </MDTypography>
+          </MDBox>
+        ),
+      },
+      {
+        Header: "usuario",
+        accessor: "username",
+        align: "left",
+        Cell: ({ row }) => (
+          <MDTypography variant="caption" color="text" fontWeight="medium">
+            {row.original.raw.username || "-"}
+          </MDTypography>
+        ),
+      },
+      {
+        Header: "teléfono",
+        accessor: "phoneNumber",
+        align: "left",
+        Cell: ({ row }) => (
+          <MDTypography variant="caption" color="text" fontWeight="medium">
+            {row.original.raw.phoneNumber || "-"}
+          </MDTypography>
+        ),
+      },
+      {
+        Header: "estado",
+        accessor: "state",
+        align: "center",
+        Cell: ({ row }) => (
+          <MDBox ml={-1}>
+            <MDBadge
+              badgeContent={Number(row.original.raw.stateId) === 1 ? "activo" : "inactivo"}
+              color={Number(row.original.raw.stateId) === 1 ? "success" : "dark"}
+              variant="gradient"
+              size="sm"
+            />
+          </MDBox>
+        ),
+      },
+      {
+        Header: "acciones",
+        accessor: "actions",
+        align: "center",
+        disableSortBy: true,
+        Cell: ({ row }) => (
+          <MDBox display="flex" alignItems="center" justifyContent="center" gap={0.5}>
+            <IconButton
+              color="info"
+              onClick={() => handleOpenEdit(row.original.raw)}
+              aria-label={`Editar usuario ${row.original.raw.username || ""}`}
+            >
+              <Icon>edit</Icon>
+            </IconButton>
+            <IconButton
+              color="error"
+              onClick={() => handleOpenDeleteDialog(row.original.raw)}
+              aria-label={`Eliminar usuario ${row.original.raw.username || ""}`}
+            >
+              <Icon>delete</Icon>
+            </IconButton>
+          </MDBox>
+        ),
+      },
     ],
     []
   );
@@ -411,54 +481,12 @@ function Users() {
   const rows = useMemo(
     () =>
       users.map((user) => ({
-        name: (
-          <MDBox lineHeight={1}>
-            <MDTypography display="block" variant="button" fontWeight="medium">
-              {`${user.name || ""} ${user.lastname || ""}`.trim()}
-            </MDTypography>
-            <MDTypography variant="caption" color="text">
-              {user.id}
-            </MDTypography>
-          </MDBox>
-        ),
-        username: (
-          <MDTypography variant="caption" color="text" fontWeight="medium">
-            {user.username || "-"}
-          </MDTypography>
-        ),
-        phoneNumber: (
-          <MDTypography variant="caption" color="text" fontWeight="medium">
-            {user.phoneNumber || "-"}
-          </MDTypography>
-        ),
-        state: (
-          <MDBox ml={-1}>
-            <MDBadge
-              badgeContent={Number(user.stateId) === 1 ? "activo" : "inactivo"}
-              color={Number(user.stateId) === 1 ? "success" : "dark"}
-              variant="gradient"
-              size="sm"
-            />
-          </MDBox>
-        ),
-        actions: (
-          <MDBox display="flex" alignItems="center" justifyContent="center" gap={0.5}>
-            <IconButton
-              color="info"
-              onClick={() => handleOpenEdit(user)}
-              aria-label={`Editar usuario ${user.username || ""}`}
-            >
-              <Icon>edit</Icon>
-            </IconButton>
-            <IconButton
-              color="error"
-              onClick={() => handleOpenDeleteDialog(user)}
-              aria-label={`Eliminar usuario ${user.username || ""}`}
-            >
-              <Icon>delete</Icon>
-            </IconButton>
-          </MDBox>
-        ),
+        raw: user,
+        name: `${user.name || ""} ${user.lastname || ""} ${user.id || ""}`.trim(),
+        username: user.username || "",
+        phoneNumber: user.phoneNumber || "",
+        state: Number(user.stateId) === 1 ? "activo" : "inactivo",
+        actions: "",
       })),
     [users]
   );
