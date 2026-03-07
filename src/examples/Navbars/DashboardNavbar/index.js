@@ -43,7 +43,7 @@ import {
 } from "examples/Navbars/DashboardNavbar/styles";
 
 // Material Dashboard 2 React context
-import { useMaterialUIController, setTransparentNavbar } from "context";
+import { useMaterialUIController, setMiniSidenav, setTransparentNavbar } from "context";
 import { useAuth } from "context/AuthContext";
 
 function DashboardNavbar({ absolute, light, isMini }) {
@@ -51,7 +51,7 @@ function DashboardNavbar({ absolute, light, isMini }) {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const [controller, dispatch] = useMaterialUIController();
-  const { transparentNavbar, fixedNavbar, darkMode } = controller;
+  const { miniSidenav, transparentNavbar, fixedNavbar, darkMode } = controller;
   const route = useLocation().pathname.split("/").slice(1);
 
   useEffect(() => {
@@ -85,6 +85,10 @@ function DashboardNavbar({ absolute, light, isMini }) {
     navigate("/authentication/sign-in", { replace: true });
   };
 
+  const handleMiniSidenav = () => {
+    setMiniSidenav(dispatch, !miniSidenav);
+  };
+
   // Styles for the navbar icons
   const iconsStyle = ({ palette: { dark, white, text }, functions: { rgba } }) => ({
     color: () => {
@@ -106,6 +110,15 @@ function DashboardNavbar({ absolute, light, isMini }) {
     >
       <Toolbar sx={(theme) => navbarContainer(theme)}>
         <MDBox color="inherit" mb={{ xs: 1, md: 0 }} sx={(theme) => navbarRow(theme, { isMini })}>
+          <IconButton
+            size="small"
+            disableRipple
+            color="inherit"
+            sx={navbarMobileMenu}
+            onClick={handleMiniSidenav}
+          >
+            <Icon sx={iconsStyle}>{miniSidenav ? "menu" : "close"}</Icon>
+          </IconButton>
           <Breadcrumbs icon="home" title={route[route.length - 1]} route={route} light={light} />
         </MDBox>
         {isMini ? null : (

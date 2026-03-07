@@ -13,7 +13,7 @@ Coded by www.creative-tim.com
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Formik } from "formik";
 import * as Yup from "yup";
 
@@ -45,8 +45,30 @@ function Basic() {
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
 
-  const { login } = useAuth();
+  const { login, token, checkAuthStatus } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const validateSessionAndRedirect = async () => {
+      if (!token) {
+        return;
+      }
+
+      const isSessionValid = await checkAuthStatus();
+
+      if (isMounted && isSessionValid) {
+        navigate("/dashboard", { replace: true });
+      }
+    };
+
+    validateSessionAndRedirect();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [token, navigate]);
 
   const handleSetRememberMe = () => setRememberMe(!rememberMe);
 

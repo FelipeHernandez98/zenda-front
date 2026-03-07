@@ -44,6 +44,15 @@ const LOCATION_LABELS = {
   4: "Bodega Bogotá",
 };
 
+const STATUS_LABELS = {
+  0: "Inactivo",
+  1: "Activo",
+  2: "Entregado",
+  3: "Cancelado",
+  4: "Retrasado",
+  5: "Pendiente",
+};
+
 function Dashboard() {
   const { roleId } = useAuth();
   const isAdmin = roleId === 0;
@@ -97,7 +106,7 @@ function Dashboard() {
       .map((value) => Number(value))
       .sort((a, b) => a - b);
 
-    const labels = sortedKeys.map((statusId) => `Estado ${statusId}`);
+    const labels = sortedKeys.map((statusId) => STATUS_LABELS[statusId] || `Estado ${statusId}`);
     const data = sortedKeys.map((statusId) => counts[statusId]);
 
     return {
@@ -220,7 +229,7 @@ function Dashboard() {
                 <ReportsBarChart
                   color="info"
                   title="envíos por estado"
-                  description="Agrupación usando statusId desde la API"
+                  description="Grafica de los envios por estado"
                   date="actualizado al cargar"
                   chart={shipmentsByStatusChart}
                 />
@@ -231,7 +240,7 @@ function Dashboard() {
                 <ReportsLineChart
                   color="success"
                   title="envíos por ubicación"
-                  description="Distribución basada en locationId"
+                  description="Grafica de los envios por ubicación"
                   date="actualizado al cargar"
                   chart={shipmentsByLocationChart}
                 />

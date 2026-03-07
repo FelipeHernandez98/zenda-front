@@ -114,20 +114,23 @@ export const AuthProvider = ({ children }) => {
   const checkAuthStatus = async () => {
     if (!token) {
       setLoading(false);
-      return;
+      return false;
     }
+
+    setLoading(true);
 
     try {
       const response = await api.get("/api/user/check-status", {
         suppressGlobalNotification: true,
       });
       setUser(response.data);
+      return true;
     } catch (error) {
       const statusCode = error.response?.status;
 
       if (statusCode === 401) {
         logout();
-        return;
+        return false;
       }
 
       if (statusCode === 403 || statusCode === 404 || statusCode === 405) {
@@ -136,17 +139,19 @@ export const AuthProvider = ({ children }) => {
             suppressGlobalNotification: true,
           });
           setUser(fallbackResponse.data);
-          return;
+          return true;
         } catch (fallbackError) {
           if (fallbackError.response?.status === 401) {
             logout();
-            return;
+            return false;
           }
           console.error("No se pudo validar sesión con /findById:", fallbackError);
         }
       } else {
         console.error("No se pudo validar sesión con /check-status:", error);
       }
+
+      return false;
     } finally {
       setLoading(false);
     }
