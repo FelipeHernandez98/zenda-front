@@ -67,15 +67,28 @@ function Dashboard() {
         setLoading(true);
         setError("");
 
-        const baseRequests = [api.get("/api/client"), api.get("/api/shipment")];
-        const requests = isAdmin ? [api.get("/api/user"), ...baseRequests] : baseRequests;
-        const responses = await Promise.all(requests);
+        const [usersResult, clientsResult, shipmentsResult] = await Promise.allSettled([
+          isAdmin ? api.get("/api/user") : Promise.resolve({ data: [] }),
+          api.get("/api/client"),
+          api.get("/api/shipment"),
+        ]);
 
-        const usersData = isAdmin && Array.isArray(responses[0]?.data) ? responses[0].data : [];
-        const clientsResponse = responses[isAdmin ? 1 : 0];
-        const shipmentsResponse = responses[isAdmin ? 2 : 1];
-        const clientsData = Array.isArray(clientsResponse.data) ? clientsResponse.data : [];
-        const shipmentsData = Array.isArray(shipmentsResponse.data) ? shipmentsResponse.data : [];
+        const usersData =
+          usersResult.status === "fulfilled" && Array.isArray(usersResult.value?.data)
+            ? usersResult.value.data
+            : [];
+        const clientsData =
+          clientsResult.status === "fulfilled" && Array.isArray(clientsResult.value?.data)
+            ? clientsResult.value.data
+            : [];
+        const shipmentsData =
+          shipmentsResult.status === "fulfilled" && Array.isArray(shipmentsResult.value?.data)
+            ? shipmentsResult.value.data
+            : [];
+
+        if (shipmentsResult.status === "rejected") {
+          throw shipmentsResult.reason;
+        }
 
         setShipments(shipmentsData);
         setStats({

@@ -40,6 +40,7 @@ import Dashboard from "layouts/dashboard";
 import Users from "layouts/users";
 import Clients from "layouts/clients";
 import Shipments from "layouts/shipments";
+import ShipmentMetrics from "layouts/shipment-metrics";
 import SignIn from "layouts/authentication/sign-in";
 
 // @mui icons
@@ -82,6 +83,15 @@ const routes = [
     icon: <Icon fontSize="small">group</Icon>,
     route: "/users",
     component: <Users />,
+    allowedRoles: [0],
+  },
+  {
+    type: "collapse",
+    name: "Cuentas envios",
+    key: "shipment-metrics",
+    icon: <Icon fontSize="small">monitoring</Icon>,
+    route: "/shipment-metrics",
+    component: <ShipmentMetrics />,
     allowedRoles: [0],
   },
   {
